@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Vaibhav Keer - Code Engineer & Future Founder.">
+    <title>Vaibhav Keer | SYSTEM_OS_2.0</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Lucide Icons (Clean, Apple-style iconography) -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts: Inter (Apple-like) & Space Grotesk (Tech) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&family=Space+Grotesk:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Space Grotesk', 'monospace'],
+                    },
+                    colors: {
+                        background: '#050505',
+                        surface: '#0A0A0A',
+                        surfaceHighlight: '#121212',
+                        primary: '#FFFFFF',
+                        secondary: '#888888',
+                        accent: '#3B82F6', /* Subtle Tech Blue, similar to VS Code focus */
+                        success: '#10B981',
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    },
+                    letterSpacing: {
+                        tighter: '-0.04em',
+                        tight: '-0.02em',
+                        widest: '0.2em',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* --- GLOBAL RESET & UTILS --- */
+        :root {
+            --cursor-size: 20px;
+        }
+
+        body {
+            background-color: #050505;
+            color: #ffffff;
+            cursor: none; /* Custom cursor */
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Custom Scrollbar (Minimalist) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #050505;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* --- CUSTOM CURSOR --- */
+        #cursor {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--cursor-size);
+            height: var(--cursor-size);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.3s, height 0.3s, background-color 0.3s, border-color 0.3s;
+            mix-blend-mode: difference;
+        }
+        
+        #cursor.hovered {
+            width: 50px;
+            height: 50px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-color: transparent;
+            backdrop-filter: blur(2px);
+        }
+
+        /* --- ANIMATIONS & UTILS --- */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .text-gradient {
+            background: linear-gradient(to right, #ffffff, #888888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Boot Loader */
+        #boot-screen {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 2rem;
+            font-family: 'Space Grotesk', monospace;
+            transition: opacity 0.8s ease-out;
+        }
+
+        .boot-line {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: bootReveal 0.1s forwards;
+            color: #444;
+            font-size: 0.8rem;
+            margin-bottom: 0.2rem;
+        }
+        .boot-line.success { color: #10B981; }
+        .boot-line.warning { color: #F59E0B; }
+        .boot-line.highlight { color: #fff; font-weight: bold; }
+
+        @keyframes bootReveal {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Scroll Reveal Utility */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Stagger delays */
+        .delay-100 { transition-delay: 100ms; }
+        .delay-200 { transition-delay: 200ms; }
+        .delay-300 { transition-delay: 300ms; }
+
+        /* Bento Grid Hover Effect */
+        .bento-card {
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s;
+        }
+        .bento-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- CUSTOM CURSOR -->
+    <div id="cursor"></div>
+
+    <!-- BOOT SCREEN (LOADING) -->
+    <div id="boot-screen">
+        <div id="boot-log"></div>
+    </div>
+
+    <!-- THREE.JS BACKGROUND -->
+    <div id="canvas-container" class="fixed inset-0 z-0 pointer-events-none opacity-40"></div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="app" class="relative z-10 opacity-0 transition-opacity duration-1000">
+
+        <!-- NAVIGATION (Floating Dock Style) -->
+        <nav class="fixed top-0 left-0 right-0 z-50 flex justify-center pt-6">
+            <div class="glass-panel px-6 py-3 rounded-full flex items-center gap-8 shadow-2xl transition-transform duration-300 hover:scale-[1.02]">
+                <a href="#home" class="text-xs font-mono tracking-widest text-secondary hover:text-white transition-colors uppercase">Init</a>
+                <a href="#manifesto" class="text-xs font-mono tracking-widest text-secondary hover:text-white transition-colors uppercase">Manifesto</a>
+                <div class="w-px h-3 bg-white/20"></div>
+                <span class="font-bold tracking-tight text-sm">VK.SYS</span>
+                <div class="w-px h-3 bg-white/20"></div>
+                <a href="#toolbox" class="text-xs font-mono tracking-widest text-secondary hover:text-white transition-colors uppercase">Toolbox</a>
+                <a href="#builds" class="text-xs font-mono tracking-widest text-secondary hover:text-white transition-colors uppercase">Builds</a>
+            </div>
+        </nav>
+
+        <!-- 01. HERO SECTION -->
+        <section id="home" class="min-h-screen flex flex-col justify-center items-center px-4 relative overflow-hidden">
+            <div class="text-center max-w-5xl mx-auto space-y-8">
+                <div class="reveal">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 mb-6">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        <span class="text-[10px] font-mono uppercase tracking-widest text-white/60">System Online v2.0</span>
+                    </div>
+                </div>
+
+                <h1 class="reveal delay-100 text-6xl md:text-8xl lg:text-[9rem] font-bold tracking-tighter leading-[0.9] text-white mix-blend-overlay">
+                    VAIBHAV<br/>KEER
+                </h1>
+                
+                <p class="reveal delay-200 text-lg md:text-xl text-secondary font-light max-w-2xl mx-auto leading-relaxed">
+                    Engineering discipline meets creative ambition. 
+                    <span class="text-white">Class 10 Student</span> architecting the future through code, logic, and design.
+                </p>
+
+                <div class="reveal delay-300 flex flex-col md:flex-row gap-4 justify-center items-center mt-8">
+                    <a href="#manifesto" class="group relative px-8 py-4 bg-white text-black rounded-full font-medium overflow-hidden transition-all hover:bg-neutral-200">
+                        <span class="relative z-10 flex items-center gap-2">
+                            Explore System
+                            <i data-lucide="arrow-down" class="w-4 h-4 group-hover:translate-y-1 transition-transform"></i>
+                        </span>
+                    </a>
+                    <a href="mailto:vaibhavkeer082@gmail.com" class="px-8 py-4 rounded-full border border-white/20 text-white hover:bg-white/5 transition-all font-mono text-sm">
+                        Initialize Contact >
+                    </a>
+                </div>
+            </div>
+
+            <!-- Absolute decorative elements -->
+            <div class="absolute bottom-12 left-12 hidden md:block text-xs font-mono text-secondary space-y-1 reveal delay-300">
+                <p>LOC: INDIA, IN</p>
+                <p>LAT: 26.9124° N</p>
+            </div>
+        </section>
+
+        <!-- 02. MANIFESTO -->
+        <section id="manifesto" class="py-32 px-4 md:px-12 bg-surfaceHighlight/30 border-y border-white/5 relative">
+            <div class="max-w-7xl mx-auto">
+                <span class="block text-xs font-mono text-accent mb-6 reveal">01 // PHILOSOPHY</span>
+                
+                <div class="grid lg:grid-cols-2 gap-16">
+                    <div class="reveal delay-100">
+                        <h2 class="text-4xl md:text-5xl font-medium tracking-tight leading-tight mb-8">
+                            Think like a <span class="text-white">Founder.</span><br>
+                            Build like an <span class="text-white">Engineer.</span>
+                        </h2>
+                        <div class="w-12 h-1 bg-white mb-8"></div>
+                    </div>
+                    
+                    <div class="space-y-8 reveal delay-200">
+                        <p class="text-xl text-secondary font-light leading-relaxed">
+                            The distance between ambition and achievement is measured in lines of code and hours of deep work. 
+                            I don't just write scripts; I build systems.
+                        </p>
+                        <p class="text-base text-secondary/80 leading-relaxed">
+                            Currently focused on mastering full-stack fundamentals and AI logic. My goal is simple but aggressive: 
+                            to found a company that shapes the next decade of technology, competing at the level of Apple and Stripe.
+                        </p>
+                        
+                        <div class="grid grid-cols-2 gap-4 mt-8">
+                            <div class="glass-panel p-6 rounded-xl">
+                                <i data-lucide="zap" class="w-6 h-6 text-white mb-4"></i>
+                                <h3 class="text-sm font-bold uppercase tracking-widest mb-1">Velocity</h3>
+                                <p class="text-xs text-secondary">Rapid iteration cycle.</p>
+                            </div>
+                            <div class="glass-panel p-6 rounded-xl">
+                                <i data-lucide="target" class="w-6 h-6 text-white mb-4"></i>
+                                <h3 class="text-sm font-bold uppercase tracking-widest mb-1">Precision</h3>
+                                <p class="text-xs text-secondary">Pixel-perfect execution.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 03. TOOLBOX (Bento Grid) -->
+        <section id="toolbox" class="py-32 px-4 md:px-12">
+            <div class="max-w-7xl mx-auto">
+                <div class="flex justify-between items-end mb-16 reveal">
+                    <div>
+                        <span class="block text-xs font-mono text-accent mb-2">02 // ARSENAL</span>
+                        <h2 class="text-4xl font-medium tracking-tight">The Toolkit</h2>
+                    </div>
+                    <div class="hidden md:block text-right">
+                        <p class="text-xs font-mono text-secondary">UPDATED: Q4 2024</p>
+                    </div>
+                </div>
+
+                <!-- Bento Grid -->
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[180px]">
+                    
+                    <!-- Python (Large) -->
+                    <div class="col-span-1 md:col-span-2 row-span-2 glass-panel rounded-3xl p-8 flex flex-col justify-between bento-card reveal">
+                        <div class="flex justify-between items-start">
+                            <i class="fab fa-python text-4xl text-white"></i>
+                            <span class="text-xs font-mono border border-white/20 px-2 py-1 rounded-full">CORE</span>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-bold mb-2">Python</h3>
+                            <p class="text-secondary text-sm">Advanced logic, OOP principles, and automation scripts. The backbone of my engineering mindset.</p>
+                        </div>
+                    </div>
+
+                    <!-- Web Tech -->
+                    <div class="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-between bento-card reveal delay-100">
+                        <i data-lucide="code-2" class="w-8 h-8 text-white"></i>
+                        <div>
+                            <h3 class="font-bold mb-1">HTML5/CSS3</h3>
+                            <p class="text-xs text-secondary">Semantic & Accessible.</p>
+                        </div>
+                    </div>
+
+                    <!-- Tailwind -->
+                    <div class="col-span-1 glass-panel rounded-3xl p-6 flex flex-col justify-between bento-card reveal delay-100">
+                        <i data-lucide="wind" class="w-8 h-8 text-cyan-400"></i>
+                        <div>
+                            <h3 class="font-bold mb-1">Tailwind</h3>
+                            <p class="text-xs text-secondary">Rapid UI Development.</p>
+                        </div>
+                    </div>
+
+                    <!-- JavaScript -->
+                    <div class="col-span-1 md:col-span-2 glass-panel rounded-3xl p-8 flex flex-col justify-between bento-card reveal delay-200">
+                        <div>
+                            <h3 class="text-xl font-bold mb-2">JavaScript</h3>
+                            <p class="text-secondary text-sm">Interactive DOM manipulation and Three.js integration.</p>
+                        </div>
+                        <div class="w-full bg-white/10 h-1 mt-4 rounded-full overflow-hidden">
+                            <div class="bg-yellow-400 h-full w-3/4"></div>
+                        </div>
+                    </div>
+
+                    <!-- Learning -->
+                    <div class="col-span-1 md:col-span-2 glass-panel rounded-3xl p-8 bg-white text-black bento-card reveal delay-300">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-xl font-bold">Currently Loading...</h3>
+                            <i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>
+                        </div>
+                        <div class="mt-auto flex gap-2 flex-wrap">
+                            <span class="px-3 py-1 bg-black/5 rounded-full text-xs font-bold border border-black/10">React</span>
+                            <span class="px-3 py-1 bg-black/5 rounded-full text-xs font-bold border border-black/10">System Design</span>
+                            <span class="px-3 py-1 bg-black/5 rounded-full text-xs font-bold border border-black/10">Next.js</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- 04. PROJECTS (Visual Showcase) -->
+        <section id="builds" class="py-32 px-4 md:px-12 bg-surfaceHighlight/20 border-t border-white/5">
+            <div class="max-w-7xl mx-auto">
+                <span class="block text-xs font-mono text-accent mb-6 reveal">03 // SELECTED WORKS</span>
+                
+                <div class="space-y-24">
+                    
+                    <!-- Project 1 -->
+                    <div class="group grid md:grid-cols-12 gap-8 items-center reveal">
+                        <div class="md:col-span-7 relative">
+                            <div class="absolute inset-0 bg-accent/20 blur-3xl rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-700"></div>
+                            <div class="glass-panel aspect-video rounded-xl overflow-hidden border border-white/10 relative group-hover:scale-[1.02] transition-transform duration-500">
+                                <!-- Mock UI for visual interest -->
+                                <div class="absolute inset-0 bg-neutral-900 flex flex-col p-4">
+                                    <div class="flex gap-2 mb-4">
+                                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                                    </div>
+                                    <div class="font-mono text-green-400 text-xs">
+                                        > initiating_protocol: UTILS_ENGINE<br>
+                                        > loading_modules... [OK]<br>
+                                        > executing calc.py...
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="md:col-span-5 space-y-4">
+                            <h3 class="text-3xl font-bold">Python Utilities Engine</h3>
+                            <p class="text-secondary leading-relaxed">
+                                A robust suite of console-based tools engineered with pure Python. Features an advanced calculator, precision stopwatch, and task management system designed with Object-Oriented principles.
+                            </p>
+                            <ul class="flex gap-4 text-xs font-mono text-white/60">
+                                <li>PYTHON 3.10</li>
+                                <li>OOP</li>
+                                <li>CLI</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Project 2 -->
+                    <div class="group grid md:grid-cols-12 gap-8 items-center reveal">
+                        <div class="md:col-span-5 order-2 md:order-1 space-y-4">
+                            <h3 class="text-3xl font-bold">E-Commerce UI Study</h3>
+                            <p class="text-secondary leading-relaxed">
+                                Pixel-perfect reconstruction of complex e-commerce interfaces (Amazon/Flipkart). Focused on mastering CSS Grid layouts, responsive design patterns, and semantic HTML structure.
+                            </p>
+                            <ul class="flex gap-4 text-xs font-mono text-white/60">
+                                <li>HTML5</li>
+                                <li>CSS GRID</li>
+                                <li>UX/UI</li>
+                            </ul>
+                        </div>
+                        <div class="md:col-span-7 order-1 md:order-2 relative">
+                            <div class="glass-panel aspect-video rounded-xl overflow-hidden border border-white/10 relative group-hover:scale-[1.02] transition-transform duration-500 flex items-center justify-center bg-neutral-900">
+                                <div class="text-center">
+                                    <div class="text-4xl font-bold text-white mb-2">STORE<span class="text-accent">FRONT</span></div>
+                                    <div class="text-xs font-mono text-secondary">UI REPLICATION STUDY</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- 05. CONTACT -->
+        <section class="py-32 px-4 text-center">
+            <div class="reveal max-w-3xl mx-auto">
+                <h2 class="text-5xl md:text-7xl font-bold tracking-tighter mb-8">Ready to <span class="text-secondary">Scale?</span></h2>
+                <p class="text-lg text-secondary mb-12">
+                    I am actively seeking mentorships and collaborative opportunities. 
+                    If you value disciplined engineering and rapid growth, let's connect.
+                </p>
+                <a href="mailto:vaibhavkeer082@gmail.com" class="inline-block glass-panel px-10 py-5 rounded-full text-lg font-medium hover:bg-white hover:text-black transition-all duration-300">
+                    vaibhavkeer082@gmail.com
+                </a>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="border-t border-white/10 py-12 px-4 md:px-12 bg-black">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="text-sm font-mono text-secondary">
+                    &copy; 2024 Vaibhav Keer. <span class="text-green-500">System Normal.</span>
+                </div>
+                <div class="flex gap-6">
+                    <a href="https://twitter.com/MrVaibhavKeer" class="text-secondary hover:text-white transition-colors"><i data-lucide="twitter" class="w-5 h-5"></i></a>
+                    <a href="#" class="text-secondary hover:text-white transition-colors"><i data-lucide="github" class="w-5 h-5"></i></a>
+                    <a href="#" class="text-secondary hover:text-white transition-colors"><i data-lucide="linkedin" class="w-5 h-5"></i></a>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- 1. BOOT SEQUENCE (SKELETON LOADER SIMULATION) ---
+        const bootLines = [
+            { text: "INITIALIZING KERNEL...", class: "text-neutral-500" },
+            { text: "LOADING MODULES: [CORE, UI, THREE_JS]...", class: "text-neutral-400" },
+            { text: "CHECKING SYSTEM INTEGRITY...", class: "text-neutral-400" },
+            { text: "ALLOCATING MEMORY...", class: "text-neutral-400" },
+            { text: "MOUNTING FILESYSTEM...", class: "text-neutral-400" },
+            { text: "USER DETECTED: VISITOR_ADMIN", class: "highlight" },
+            { text: "ESTABLISHING SECURE CONNECTION...", class: "text-neutral-400" },
+            { text: "RENDERING ENVIRONMENT...", class: "text-neutral-400" },
+            { text: "SYSTEM READY.", class: "success" }
+        ];
+
+        const bootScreen = document.getElementById('boot-screen');
+        const bootLog = document.getElementById('boot-log');
+        const app = document.getElementById('app');
+        
+        let lineIndex = 0;
+
+        function addBootLine() {
+            if (lineIndex < bootLines.length) {
+                const lineData = bootLines[lineIndex];
+                const p = document.createElement('div');
+                p.className = `boot-line ${lineData.class || ''} font-mono text-xs md:text-sm`;
+                p.textContent = `> ${lineData.text}`;
+                bootLog.appendChild(p);
+                lineIndex++;
+                
+                // Random delay for realism
+                const delay = Math.random() * 200 + 50;
+                setTimeout(addBootLine, delay);
+            } else {
+                // Boot complete
+                setTimeout(() => {
+                    bootScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        bootScreen.style.display = 'none';
+                        app.style.opacity = '1';
+                        // Initialize Three.js after boot to save resources
+                        initThreeJS();
+                    }, 800);
+                }, 800);
+            }
+        }
+
+        // Start Boot
+        window.addEventListener('load', () => {
+            lucide.createIcons();
+            addBootLine();
+        });
+
+
+        // --- 2. CUSTOM CURSOR LOGIC ---
+        const cursor = document.getElementById('cursor');
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        // Hover effects for cursor
+        const hoverableElements = document.querySelectorAll('a, button, .bento-card');
+        hoverableElements.forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hovered'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hovered'));
+        });
+
+
+        // --- 3. SCROLL OBSERVER (NETFLIX-SMOOTH REVEALS) ---
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+
+        // --- 4. THREE.JS BACKGROUND (The "Constellation" Network) ---
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            if (!container) return;
+
+            const scene = new THREE.Scene();
+            
+            // Fog for depth fading
+            scene.fog = new THREE.FogExp2(0x050505, 0.002);
+
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.z = 100;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Particles
+            const particleCount = 200; // Optimized count
+            const particles = new THREE.BufferGeometry();
+            const positions = [];
+            const velocities = [];
+
+            for (let i = 0; i < particleCount; i++) {
+                const x = (Math.random() - 0.5) * 400;
+                const y = (Math.random() - 0.5) * 400;
+                const z = (Math.random() - 0.5) * 200;
+                positions.push(x, y, z);
+                
+                // Slow, drift velocity
+                velocities.push((Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.1);
+            }
+
+            particles.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            // Material
+            const material = new THREE.PointsMaterial({
+                color: 0x888888,
+                size: 2,
+                transparent: true,
+                opacity: 0.8,
+                sizeAttenuation: true
+            });
+
+            const pointCloud = new THREE.Points(particles, material);
+            scene.add(pointCloud);
+
+            // Lines connecting particles (The Network)
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x333333,
+                transparent: true,
+                opacity: 0.15
+            });
+
+            // Interactive Mouse
+            let mouseX = 0;
+            let mouseY = 0;
+            
+            document.addEventListener('mousemove', (event) => {
+                mouseX = (event.clientX - window.innerWidth / 2) * 0.05;
+                mouseY = (event.clientY - window.innerHeight / 2) * 0.05;
+            });
+
+            // Resize Handler
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            // Animation Loop
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Rotate entire cloud slowly
+                pointCloud.rotation.y += 0.001;
+                pointCloud.rotation.x += 0.0005;
+
+                // Subtle mouse parallax
+                camera.position.x += (mouseX - camera.position.x) * 0.05;
+                camera.position.y += (-mouseY - camera.position.y) * 0.05;
+                camera.lookAt(scene.position);
+
+                renderer.render(scene, camera);
+            }
+
+            animate();
+        }
+    </script>
+</body>
+</html>
